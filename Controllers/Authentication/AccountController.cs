@@ -1,4 +1,5 @@
-﻿using AuthWithIdentityFramework.ViewModels;
+﻿using AuthWithIdentityFramework.Repository.Interface;
+using AuthWithIdentityFramework.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
@@ -9,12 +10,15 @@ namespace AuthWithIdentityFramework.Controllers.Authentication
     {
         private readonly UserManager<IdentityUser> _userManager;
         private readonly SignInManager<IdentityUser> _signInManager;
+        private readonly IEmailSender _emailSender;
 
-        public AccountController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager)
+        public AccountController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IEmailSender emailSender)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _emailSender = emailSender;
         }
+
 
         public IActionResult Index()
         {
@@ -45,6 +49,8 @@ namespace AuthWithIdentityFramework.Controllers.Authentication
                     var result = await _userManager.CreateAsync(user, model.Password);
                     if (result.Succeeded)
                     {
+                        bool status = await _emailSender.SendEmailAsync(model.Email, "Registration Success", "Welcome to our site Your registration is successful.");
+
                         await _signInManager.SignInAsync(user, isPersistent: false);
                         return RedirectToAction("Index", "Home");
                     }

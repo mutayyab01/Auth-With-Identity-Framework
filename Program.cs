@@ -1,4 +1,6 @@
 using AuthWithIdentityFramework.Data;
+using AuthWithIdentityFramework.Repository.Interface;
+using AuthWithIdentityFramework.Repository.Service;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,12 +13,12 @@ builder.Services.AddDbContext<ApplicationContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 // Registering the Identity services
 builder.Services.AddIdentity<IdentityUser, IdentityRole>().AddEntityFrameworkStores<ApplicationContext>().AddDefaultTokenProviders();
-
+builder.Services.AddTransient<IEmailSender, EmailSender>();
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.AccessDeniedPath = "/Account/Login";
     options.LoginPath = "/Account/Login";
-    options.LogoutPath= "/Account/Logout";
+    options.LogoutPath = "/Account/Logout";
     options.Cookie.Name = "AuthWithIdentityFramework";
     options.ExpireTimeSpan = TimeSpan.FromMinutes(1);
     options.SlidingExpiration = true;
