@@ -3,6 +3,7 @@ using AuthWithIdentityFramework.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace AuthWithIdentityFramework.Controllers.Authentication
 {
@@ -11,12 +12,17 @@ namespace AuthWithIdentityFramework.Controllers.Authentication
         private readonly UserManager<IdentityUser> _userManager;
         private readonly SignInManager<IdentityUser> _signInManager;
         private readonly IEmailSender _emailSender;
+        private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IConfiguration _configuration;
 
-        public AccountController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IEmailSender emailSender)
+        public AccountController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IEmailSender emailSender,
+            IWebHostEnvironment webHostEnvironment, IConfiguration configuration)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _emailSender = emailSender;
+            _webHostEnvironment = webHostEnvironment;
+            _configuration = configuration;
         }
 
 
@@ -49,8 +55,7 @@ namespace AuthWithIdentityFramework.Controllers.Authentication
                     var result = await _userManager.CreateAsync(user, model.Password);
                     if (result.Succeeded)
                     {
-                        bool status = await _emailSender.SendEmailAsync(model.Email, "Registration Success", "Welcome to our site Your registration is successful.");
-
+                        bool status = await _emailSender.SendEmailAsync(model.Email, "Registration Success", await GetEmailBody(model.Email));
                         await _signInManager.SignInAsync(user, isPersistent: false);
                         return RedirectToAction("Index", "Home");
                     }
@@ -115,6 +120,16 @@ namespace AuthWithIdentityFramework.Controllers.Authentication
             return RedirectToAction("Login", "Account");
         }
 
+        public async Task<string> GetEmailBody(string username)
+        {
+            string LoginURL = _configuration.GetValue<string>("URLs:LoginURL");
+            string path = Path.Combine(_webHostEnvironment.WebRootPath, "Template", "Welcome.cshtml");
+            string htmlString = System.IO.File.ReadAllText(path);
+            htmlString = htmlString.Replace("{{title}}", "User Registration");
+            htmlString = htmlString.Replace("{{Username}}", username);
+            htmlString = htmlString.Replace("{{url}}", LoginURL);
+            return htmlString;
+        }
 
     }
 }

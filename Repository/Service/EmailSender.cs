@@ -25,24 +25,25 @@ namespace AuthWithIdentityFramework.Repository.Service
                     Port = _configuration.GetValue<int>("AppSetting:EmailSetting:Port"),
                     EnableSSL = _configuration.GetValue<bool>("AppSetting:EmailSetting:EnableSSL"),
                 };
-                MailMessage mailMessage= new MailMessage()
+                MailMessage mailMessage = new MailMessage()
                 {
                     From = new MailAddress(getEmailSetting.From),
                     Subject = subject,
                     Body = htmlMessage,
-                    //IsBodyHtml = true,
+                    BodyEncoding = System.Text.Encoding.ASCII,
+                    IsBodyHtml = true,
                 };
-                mailMessage.To.Add(email); 
+                mailMessage.To.Add(email);
 
-                SmtpClient smtpClient= new SmtpClient(getEmailSetting.SmtpServer)
+                SmtpClient smtpClient = new SmtpClient(getEmailSetting.SmtpServer)
                 {
                     Port = getEmailSetting.Port,
                     Credentials = new System.Net.NetworkCredential(getEmailSetting.From, getEmailSetting.SecretKey),
                     EnableSsl = getEmailSetting.EnableSSL,
                     //UseDefaultCredentials = false,
                 };
-                await smtpClient.SendMailAsync(mailMessage);    
-                status= true;   
+                await smtpClient.SendMailAsync(mailMessage);
+                status = true;
             }
             catch (Exception)
             {
