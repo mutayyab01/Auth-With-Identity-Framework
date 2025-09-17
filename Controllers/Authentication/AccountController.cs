@@ -37,6 +37,7 @@ namespace AuthWithIdentityFramework.Controllers.Authentication
         [HttpPost]
         public async Task<IActionResult> Register(RegisterVM model)
         {
+            Response response = new Response();
             try
             {
                 if (ModelState.IsValid)
@@ -55,9 +56,19 @@ namespace AuthWithIdentityFramework.Controllers.Authentication
                     var result = await _userManager.CreateAsync(user, model.Password);
                     if (result.Succeeded)
                     {
-                        string emailBody = await GetEmailBody(model.Email, "User Registration", "", "Welcome");
-                        bool status = await _emailSender.SendEmailAsync(model.Email, "Registration Success", emailBody);
-                        await _signInManager.SignInAsync(user, isPersistent: false);
+                        var userId = await _userManager.GetUserIdAsync(user);
+                        var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                        var confirmationLink = Url.Action("ConfirmEmail", "Account", new { userId = userId, token = code }, protocol: HttpContext.Request.Scheme);
+
+                        string emailBody = GetEmailBody(model.Email, "Email Confirmation Link", confirmationLink, "EmailConfirmation");
+                        bool status = await _emailSender.SendEmailAsync(model.Email, "Email Confirmation Link", emailBody);
+                        if (status)
+                        {
+                            response.StatusCode = "Success";
+                            response.Message = "Registration Successful! Please check your email to confirm your account.";
+                            return RedirectToAction("ForgetPasswordConfirmation", "Account", response);
+                        }
+                        //await _signInManager.SignInAsync(user, isPersistent: false);
                         return RedirectToAction("Index", "Home");
                     }
                     if (result.Errors.Count() > 0)
@@ -100,12 +111,21 @@ namespace AuthWithIdentityFramework.Controllers.Authentication
                         ModelState.AddModelError(string.Empty, "Invalid Credentials");
                         return View(model);
                     }
-                    var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, lockoutOnFailure: false);
-                    if (result.Succeeded)
+                    bool confirmStatus = await _userManager.IsEmailConfirmedAsync(checkEmail);
+                    if (!confirmStatus)
                     {
-                        return RedirectToAction("Index", "Home");
+                        ModelState.AddModelError(string.Empty, "Email Not Confirmed! Please Confirm the Email First! then Login Again.");
+                        return View(model);
                     }
-                    ModelState.AddModelError(string.Empty, "Invalid Login Attempt!");
+                    else
+                    {
+                        var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, lockoutOnFailure: false);
+                        if (result.Succeeded)
+                        {
+                            return RedirectToAction("Index", "Home");
+                        }
+                        ModelState.AddModelError(string.Empty, "Invalid Login Attempt!");
+                    }
                 }
             }
             catch (Exception)
@@ -121,7 +141,7 @@ namespace AuthWithIdentityFramework.Controllers.Authentication
             return RedirectToAction("Login", "Account");
         }
 
-        public async Task<string> GetEmailBody(string? username, string? title, string? callbackUrl, string? EmailTemplateName)
+        public string GetEmailBody(string? username, string? title, string? callbackUrl, string? EmailTemplateName)
         {
             string LoginURL = _configuration.GetValue<string>("URLs:LoginURL");
             string path = Path.Combine(_webHostEnvironment.WebRootPath, "EmailTemplates", $"{EmailTemplateName}.cshtml");
@@ -153,7 +173,7 @@ namespace AuthWithIdentityFramework.Controllers.Authentication
             {
                 var code = await _userManager.GeneratePasswordResetTokenAsync(user);
                 var callbackUrl = Url.Action("ResetPassword", "Account", new { userId = user.Id, Token = code }, protocol: HttpContext.Request.Scheme);
-                string emailBody = await GetEmailBody("", "Reset Password", callbackUrl, "ResetPassword");
+                string emailBody = GetEmailBody("", "Reset Password", callbackUrl, "ResetPassword");
 
                 //bool isSendEmail = await _emailSender.SendEmailAsync(model.Email, "Reset Password",
                 //    $"Please reset your password by clicking here: <a href='{callbackUrl}' style='background-color:#04aa6d;border:none;color:white;padding:10px;" +
@@ -211,5 +231,26 @@ namespace AuthWithIdentityFramework.Controllers.Authentication
             return View(forget);
 
         }
+        public async Task<IActionResult> ConfirmEmail(string userId, string Token)
+        {
+            Response response = new Response();
+            if (userId != null && Token != null)
+            {
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    return View("Error");
+                }
+                var result = await _userManager.ConfirmEmailAsync(user, Token);
+                if (result.Succeeded)
+                {
+                    response.Message = "Thank you for Confirming Your Email!";
+                    return RedirectToAction("ForgetPasswordConfirmation", "Account", response);
+                }
+            }
+            return View("Error");
+        }
+
+
     }
 }
