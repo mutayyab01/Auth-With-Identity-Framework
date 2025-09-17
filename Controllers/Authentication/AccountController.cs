@@ -96,7 +96,7 @@ namespace AuthWithIdentityFramework.Controllers.Authentication
                     }
                     if (await _userManager.CheckPasswordAsync(checkEmail, model.Password) == false)
                     {
-                        ModelState.AddModelError("LoginError", "Invalid Credentials");
+                        ModelState.AddModelError(string.Empty, "Invalid Credentials");
                         return View(model);
                     }
                     var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, lockoutOnFailure: false);
@@ -104,7 +104,7 @@ namespace AuthWithIdentityFramework.Controllers.Authentication
                     {
                         return RedirectToAction("Index", "Home");
                     }
-                    ModelState.AddModelError("Intruder", "Invalid Login Attempt!");
+                    ModelState.AddModelError(string.Empty, "Invalid Login Attempt!");
                 }
             }
             catch (Exception)
@@ -130,6 +130,81 @@ namespace AuthWithIdentityFramework.Controllers.Authentication
             htmlString = htmlString.Replace("{{url}}", LoginURL);
             return htmlString;
         }
+        public IActionResult ForgetPassword()
+        {
+            return View();
+        }
 
+        [HttpPost]
+        public async Task<IActionResult> ForgetPassword(ForgetPasswordOrUsernameVM model)
+        {
+            ModelState.Remove("Password");
+            ModelState.Remove("ConfirmPassword");
+            ModelState.Remove("UserId");
+            ModelState.Remove("Token");
+            if (!ModelState.IsValid)
+            {
+                return View();
+            }
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user != null)
+            {
+                var code = await _userManager.GeneratePasswordResetTokenAsync(user);
+                var callbackUrl = Url.Action("ResetPassword", "Account", new { userId = user.Id, Token = code }, protocol: HttpContext.Request.Scheme);
+                bool isSendEmail = await _emailSender.SendEmailAsync(model.Email, "Reset Password",
+                    $"Please reset your password by clicking here: <a href='{callbackUrl}' style='background-color:#04aa6d;border:none;color:white;padding:10px;" +
+                    $"text-align:center;text-decoration:none;display:inline-block;font-size:16px;margin:4px 2px;cursor:pointer;border-radius:10px;'> Click Here</a>");
+                if (isSendEmail)
+                {
+                    Response response = new Response()
+                    {
+                        StatusCode = "Success",
+                        Message = "Reset Password link"
+                    };
+                    return RedirectToAction("ForgetPasswordConfirmation", "Account", response);
+                }
+            }
+
+            return View();
+        }
+        public IActionResult ForgetPasswordConfirmation(Response response)
+        {
+
+            return View(response);
+        }
+
+        public IActionResult ResetPassword(string userId, string Token)
+        {
+            var model = new ForgetPasswordOrUsernameVM
+            {
+                Token = Token,
+                UserId = userId
+            };
+
+            return View();
+        }
+        [HttpPost]
+        public async Task<IActionResult> ResetPassword(ForgetPasswordOrUsernameVM forget)
+        {
+            Response response = new Response();
+            ModelState.Remove("Email");
+            if (!ModelState.IsValid)
+            {
+                return View(forget);
+            }
+            var user = await _userManager.FindByIdAsync(forget.UserId);
+            if (user == null)
+            {
+                return View(forget);
+            }
+            var result = await _userManager.ResetPasswordAsync(user, forget.Token, forget.Password);
+            if (result.Succeeded)
+            {
+                response.Message = "Your Password has been Successfully Reset";
+                return RedirectToAction("ForgetPasswordConfirmation", response);
+            }
+            return View(forget);
+
+        }
     }
 }
