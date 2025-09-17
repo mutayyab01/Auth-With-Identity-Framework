@@ -2,32 +2,100 @@
 @{
     ViewData["Title"] = "Register";
     Layout = "~/Views/Shared/LayoutLR.cshtml";
+    var today = DateTime.Now.Date.ToString("yyyy-MM-dd");
 }
 
 <form method="post" asp-action="Register" asp-controller="Account">
     <h3 class="text-muted mb-1 text-center" style="font-size:20px;">Create An Account</h3>
     <hr />
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-    <div class="mb-3">
-        <label class="mb-2" asp-for="Email"></label><span class="text-danger">*</span>
-        <input type="email" asp-for="Email" class="form-control" autocomplete="on" placeholder="Please Enter Email" />
-        <span asp-validation-for="Email" class="text-danger"></span>
+    <div class="row">
+        <div class="col-6">
+            <div class="mb-3">
+                <label class="mb-2" asp-for="FirstName"></label><span class="text-danger">*</span>
+                <input type="text" asp-for="FirstName" class="form-control" placeholder="Please Enter First Name" />
+                <span asp-validation-for="FirstName" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="mb-3">
+                <label class="mb-2" asp-for="LastName"></label><span class="text-danger">*</span>
+                <input type="text" asp-for="LastName" class="form-control" placeholder="Please Enter Last Name" />
+                <span asp-validation-for="LastName" class="text-danger"></span>
+            </div>
+        </div>
     </div>
-    <div class="mb-3">
-        <label class="mb-2" asp-for="Password"></label><span class="text-danger">*</span>
-        <input type="password" asp-for="Password" class="form-control" placeholder="Please Enter Password" />
-        <span asp-validation-for="Password" class="text-danger"></span>
+    <div class="row">
+        <div class="col-6">
+            <div class="mb-3">
+                <label class="mb-2" asp-for="Gender"></label><span class="text-danger">*</span>
+                <select asp-for="Gender" class="form-control">
+                    <option value="">--Select Gender--</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                </select>
+                <span asp-validation-for="Gender" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="mb-3">
+                <label class="mb-2" asp-for="BirthDate"></label><span class="text-danger">*</span>
+                <input type="date" id="BirthDate" max="@today" asp-for="BirthDate" class="form-control" placeholder="dd/MM/yyyy" />
+                <span asp-validation-for="BirthDate" class="text-danger"></span>
+            </div>
+        </div>
     </div>
-    <div class="mb-3">
-        <label class="mb-2" asp-for="ConfirmPassword"></label><span class="text-danger">*</span>
-        <input type="password" asp-for="ConfirmPassword" class="form-control" placeholder="Enter Confirm Password" />
-        <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+    <div class="row">
+        <div class="col-6">
+            <div class="mb-3">
+                <label class="mb-2" asp-for="Username"></label><span class="text-danger">*</span>
+                <input type="text" asp-for="Username" class="form-control" placeholder="Please Enter Username" />
+                <span asp-validation-for="Username" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="mb-3">
+                <label class="mb-2" asp-for="Email"></label><span class="text-danger">*</span>
+                <input type="email" asp-for="Email" class="form-control" autocomplete="Email" placeholder="Please Enter Email" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+        </div>
     </div>
-    <div class="float-end">
+    <div class="row">
+        <div class="col-6">
+            <div class="mb-3">
+                <label class="mb-2" asp-for="Password"></label><span class="text-danger">*</span>
+                <input type="password" asp-for="Password" class="form-control" placeholder="Please Enter Password" />
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="mb-3">
+                <label class="mb-2" asp-for="ConfirmPassword"></label><span class="text-danger">*</span>
+                <input type="password" asp-for="ConfirmPassword" class="form-control" placeholder="Enter Confirm Password" />
+                <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+    <div class="col-6">
+        <div class="mb-3">
+            <label>
+                <input type="checkbox" checked="checked" asp-for="Status" class="form-check-inline" /> <label class="form-label mb-2" asp-for="Status"></label>
+            </label>
+        </div>
+    </div>
+    <div class="d-grid">
         <button type="submit" class="btn btn-primary m-2">Register</button>
     </div>
 </form>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-}   
+    @* <script>
+        $(document).ready(function (){
+            let today=new Date().toISOString().split("T")[0];
+            document.getElementById("BirthDate").setAttribute("max",today);
+        });
+    </script> *@
+}

@@ -1,7 +1,10 @@
-﻿using AuthWithIdentityFramework.Repository.Interface;
+﻿using AuthWithIdentityFramework.Data;
+using AuthWithIdentityFramework.Models.IdentityModel;
+using AuthWithIdentityFramework.Repository.Interface;
 using AuthWithIdentityFramework.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
@@ -9,20 +12,22 @@ namespace AuthWithIdentityFramework.Controllers.Authentication
 {
     public class AccountController : Controller
     {
-        private readonly UserManager<IdentityUser> _userManager;
-        private readonly SignInManager<IdentityUser> _signInManager;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IEmailSender _emailSender;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IConfiguration _configuration;
+        private readonly ApplicationContext _applicationContext;
 
-        public AccountController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IEmailSender emailSender,
-            IWebHostEnvironment webHostEnvironment, IConfiguration configuration)
+        public AccountController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IEmailSender emailSender,
+            IWebHostEnvironment webHostEnvironment, IConfiguration configuration, ApplicationContext applicationContext)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _emailSender = emailSender;
             _webHostEnvironment = webHostEnvironment;
             _configuration = configuration;
+            _applicationContext = applicationContext;
         }
 
 
@@ -40,6 +45,7 @@ namespace AuthWithIdentityFramework.Controllers.Authentication
             Response response = new Response();
             try
             {
+                ModelState.Remove("ModifiedOn");
                 if (ModelState.IsValid)
                 {
                     var checkEmail = await _userManager.FindByEmailAsync(model.Email);
@@ -48,10 +54,22 @@ namespace AuthWithIdentityFramework.Controllers.Authentication
                         ModelState.AddModelError("Email", "Email already exists");
                         return View(model);
                     }
-                    var user = new IdentityUser()
+                    var isUsernameExist = _applicationContext.Users.Where(x => x.UserName == model.Username).Any(); ;
+                    if (isUsernameExist)
                     {
-                        UserName = model.Email,
+                        ModelState.AddModelError("Username", "Username already exists");
+                        return View(model);
+                    }
+                    var user = new ApplicationUser()
+                    {
+                        UserName = model.Username,
                         Email = model.Email,
+                        FirstName = model.FirstName,
+                        LastName = model.LastName,
+                        Gender = model.Gender,
+                        BirthDate = model.BirthDate,
+                        Status = model.Status,
+                        //CreatedOn = DateTime.Now,
                     };
                     var result = await _userManager.CreateAsync(user, model.Password);
                     if (result.Succeeded)
@@ -100,7 +118,7 @@ namespace AuthWithIdentityFramework.Controllers.Authentication
             {
                 if (ModelState.IsValid)
                 {
-                    IdentityUser checkEmail = await _userManager.FindByEmailAsync(model.Email);
+                    ApplicationUser checkEmail = await _userManager.FindByEmailAsync(model.Email);
                     if (checkEmail == null)
                     {
                         ModelState.AddModelError("Email", "Email Not Fount! Please Register First!");
@@ -119,7 +137,7 @@ namespace AuthWithIdentityFramework.Controllers.Authentication
                     }
                     else
                     {
-                        var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, lockoutOnFailure: false);
+                        var result = await _signInManager.PasswordSignInAsync(checkEmail.UserName, model.Password, model.RememberMe, lockoutOnFailure: false);
                         if (result.Succeeded)
                         {
                             return RedirectToAction("Index", "Home");

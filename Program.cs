@@ -1,4 +1,5 @@
 using AuthWithIdentityFramework.Data;
+using AuthWithIdentityFramework.Models.IdentityModel;
 using AuthWithIdentityFramework.Repository.Interface;
 using AuthWithIdentityFramework.Repository.Service;
 using Microsoft.AspNetCore.Identity;
@@ -12,7 +13,7 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddDbContext<ApplicationContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 // Registering the Identity services
-builder.Services.AddIdentity<IdentityUser, IdentityRole>(option =>
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(option =>
 {
     option.SignIn.RequireConfirmedEmail = true;
 })
