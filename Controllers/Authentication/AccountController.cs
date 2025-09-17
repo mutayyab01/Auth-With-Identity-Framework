@@ -55,7 +55,8 @@ namespace AuthWithIdentityFramework.Controllers.Authentication
                     var result = await _userManager.CreateAsync(user, model.Password);
                     if (result.Succeeded)
                     {
-                        bool status = await _emailSender.SendEmailAsync(model.Email, "Registration Success", await GetEmailBody(model.Email));
+                        string emailBody = await GetEmailBody(model.Email, "User Registration", "", "Welcome");
+                        bool status = await _emailSender.SendEmailAsync(model.Email, "Registration Success", emailBody);
                         await _signInManager.SignInAsync(user, isPersistent: false);
                         return RedirectToAction("Index", "Home");
                     }
@@ -120,14 +121,15 @@ namespace AuthWithIdentityFramework.Controllers.Authentication
             return RedirectToAction("Login", "Account");
         }
 
-        public async Task<string> GetEmailBody(string username)
+        public async Task<string> GetEmailBody(string? username, string? title, string? callbackUrl, string? EmailTemplateName)
         {
             string LoginURL = _configuration.GetValue<string>("URLs:LoginURL");
-            string path = Path.Combine(_webHostEnvironment.WebRootPath, "Template", "Welcome.cshtml");
+            string path = Path.Combine(_webHostEnvironment.WebRootPath, "EmailTemplates", $"{EmailTemplateName}.cshtml");
             string htmlString = System.IO.File.ReadAllText(path);
-            htmlString = htmlString.Replace("{{title}}", "User Registration");
+            htmlString = htmlString.Replace("{{title}}", title);
             htmlString = htmlString.Replace("{{Username}}", username);
             htmlString = htmlString.Replace("{{url}}", LoginURL);
+            htmlString = htmlString.Replace("{{callbackUrl}}", callbackUrl);
             return htmlString;
         }
         public IActionResult ForgetPassword()
@@ -151,9 +153,12 @@ namespace AuthWithIdentityFramework.Controllers.Authentication
             {
                 var code = await _userManager.GeneratePasswordResetTokenAsync(user);
                 var callbackUrl = Url.Action("ResetPassword", "Account", new { userId = user.Id, Token = code }, protocol: HttpContext.Request.Scheme);
-                bool isSendEmail = await _emailSender.SendEmailAsync(model.Email, "Reset Password",
-                    $"Please reset your password by clicking here: <a href='{callbackUrl}' style='background-color:#04aa6d;border:none;color:white;padding:10px;" +
-                    $"text-align:center;text-decoration:none;display:inline-block;font-size:16px;margin:4px 2px;cursor:pointer;border-radius:10px;'> Click Here</a>");
+                string emailBody = await GetEmailBody("", "Reset Password", callbackUrl, "ResetPassword");
+
+                //bool isSendEmail = await _emailSender.SendEmailAsync(model.Email, "Reset Password",
+                //    $"Please reset your password by clicking here: <a href='{callbackUrl}' style='background-color:#04aa6d;border:none;color:white;padding:10px;" +
+                //    $"text-align:center;text-decoration:none;display:inline-block;font-size:16px;margin:4px 2px;cursor:pointer;border-radius:10px;'> Click Here</a>");
+                bool isSendEmail = await _emailSender.SendEmailAsync(model.Email, "Reset Password", emailBody);
                 if (isSendEmail)
                 {
                     Response response = new Response()
